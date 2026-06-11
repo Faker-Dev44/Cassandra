@@ -1,0 +1,10 @@
+{
+    "anio": 2025,
+    "mes": 1,
+    "id_membresia": 6001,
+    "fecha_registro": "2025-01-05T08:45:00Z",
+    "id_comprador": 101,
+    "codigo_membresia": "MEM-2025-A001",
+    "monto_cobrado": 10.00,
+    "estado": "activa"
+}

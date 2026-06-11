@@ -1,0 +1,77 @@
+version: '3.9'
+
+services:
+  cassandra-local:
+    image: cassandra:4.0
+    container_name: museo-cassandra-nodo
+    ports:
+      - "9042:9042"
+    environment:
+      - CASSANDRA_CLUSTER_NAME=ClusterMuseoUNEG
+    volumes:
+      - cassandra-data:/var/lib/cassandra
+      - ../scripts:/docker-entrypoint-initdb.d
+    restart: always
+    healthcheck:
+      test: ["CMD-SHELL", "cqlsh -e 'DESC KEYSPACES'"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
+    networks:
+      cassandra-net:
+        ipv4_address: 172.20.0.10
+
+  # 2. Contenedor auxiliar temporal (Tarea de Franner para automatizar el Keyspace)
+  cassandra-init-db:
+    image: cassandra:4.0
+    container_name: museo-cassandra-init
+    volumes:
+      - ../scripts:/opt/scripts
+    depends_on:
+      cassandra-local:
+        condition: service_healthy
+    command: >
+      /bin/bash -c "
+        echo 'Inyectando scripts de inicialización NoSQL...' &&
+        cqlsh cassandra-local 9042 -f /opt/scripts/01_init_keyspace.cql &&
+        cqlsh cassandra-local 9042 -f /opt/scripts/02_table_obras.cql &&
+        cqlsh cassandra-local 9042 -f /opt/scripts/03_table_seguridad.cql &&
+        cqlsh cassandra-local 9042 -f /opt/scripts/04_table_membresias.cql &&
+        cqlsh cassandra-local 9042 -f /opt/scripts/05_tables_reportes.cql &&
+        cqlsh cassandra-local 9042 -f /opt/scripts/seed_seguridad.cql &&
+        cqlsh cassandra-local 9042 -f /opt/scripts/seed_obras.cql &&
+        cqlsh cassandra-local 9042 -f /opt/scripts/seed_membresias.cql &&
+        cqlsh cassandra-local 9042 -f /opt/scripts/seed_reportes.cql
+      "
+    restart: no
+    networks:
+      - cassandra-net
+
+  # 3. Interfaz Web para Cassandra
+  cassandra-web:
+    image: delermando/docker-cassandra-web:v0.4.0
+    container_name: museo-cassandra-web
+    ports:
+      - "3000:3000"
+    environment:
+      - CASSANDRA_HOST_IP=172.20.0.10
+      - CASSANDRA_PORT=9042
+      - CASSANDRA_USERNAME=cassandra
+      - CASSANDRA_PASSWORD=cassandra
+    depends_on:
+      cassandra-local:
+        condition: service_healthy
+    restart: always
+    networks:
+      - cassandra-net
+
+networks:
+  cassandra-net:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/24
+
+volumes:
+  cassandra-data:

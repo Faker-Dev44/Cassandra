@@ -1,0 +1,11 @@
+{
+    "anio": 2025,
+    "mes": 1,
+    "id_factura": 5001,
+    "fecha_emision": "2025-01-15T10:30:00Z",
+    "id_comprador": 101,
+    "monto_neto": 150.00,
+    "iva_calculado": 24.00,
+    "ganancia_museo": 45.00,
+    "estado": "pagada"
+}
