@@ -38,6 +38,30 @@ app.include_router(reportes_router)
 def read_root():
     return {"status": "online", "message": "Microservicio de Auditoría del Museo en funcionamiento"}
 
+# Agregar en el microservicio de Cassandra (Python - FastAPI):
+from app.config.database import conexion_cassandra
+
+@app.get("/ping-db", tags=["Salud"])
+async def ping_database():
+    try:
+        session = conexion_cassandra.session
+        if session is None:
+            # Intentar reconectar si la sesión se había cerrado
+            conexion_cassandra.conectar()
+            session = conexion_cassandra.session
+            
+        if session:
+            # Ejecuta la consulta de metadatos más rápida y ligera de Cassandra
+            row = session.execute("SELECT release_version FROM system.local").one()
+            return {
+                "status": "online",
+                "cassandra_version": row[0],
+                "message": "Astra DB despertado con éxito"
+            }
+        return {"status": "error", "message": "Sesión de Cassandra no disponible"}
+    except Exception as e:
+        return {"status": "error", "detail": str(e)}
+
 
 import uvicorn
 import os
